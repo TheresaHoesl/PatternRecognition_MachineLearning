@@ -51,7 +51,7 @@ class HMM:
         self.nStates = mc.nStates
         self.dataSize = distributions[0].dataSize
     
-    def rand(self, nSamples):
+    def rand(self, nSamples, length=1):
         """
         [X,S]=rand(self,nSamples); generates a random sequence of data
         from a given Hidden Markov Model.
@@ -72,8 +72,8 @@ class HMM:
         S = self.stateGen.rand(nSamples)
         X = []
         for i in range(len(S)):
-            vec = self.outputDistr[S[i]-1].rand(1)
-            X.append(vec[0][0])
+            vec = self.outputDistr[S[i]-1].rand(length)
+            X.append(vec[0])
         return X, S
         
         

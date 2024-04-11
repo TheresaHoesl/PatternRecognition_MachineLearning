@@ -89,16 +89,16 @@ class MarkovChain:
         for i in range(tmax):
             if i == 0:
                 dis = DiscreteD(self.q)
-                cur_state = dis.rand(nData=1)
+                cur_state = dis.rand(nData=1) + 1
                 if cur_state == self.nStates + 1:
                     return S
                 S.append(cur_state[0])
                 
             else:
-                row_nested = self.A[cur_state]
+                row_nested = self.A[cur_state-1]
                 row = [item for sublist in row_nested for item in sublist]
                 dis = DiscreteD(row)
-                cur_state = dis.rand(nData=1)
+                cur_state = dis.rand(nData=1) + 1
                 if cur_state == self.nStates + 1:
                     return S
                 S.append(cur_state[0])
