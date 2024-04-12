@@ -130,8 +130,45 @@ class MarkovChain:
     def initErgodic(self):
         pass
 
-    def forward(self):
-        pass
+    def forward(self, pX):
+        '''
+        Input:
+        matrix pX of size: N (nr of states) x T filled with values proportional to the state-conditional probability mass
+        or density values for each state and each frame in the observed feature sequence
+        
+        Output:
+        alpha_hat is matrix of N (nr of states) x T: scaled forward variable
+        c is vector of length T and contains the forward scaled factors
+        '''
+        N, T = pX.shape
+        alpha_hat = np.zeros((N, T))
+        if self.A.shape[0] != self.A.shape[1]:
+            # finite duration
+            c = np.zeros(T+1)
+            A = self.A[:, :-1] # cut exit state
+        else:
+            c = np.zeros(T)
+            A = self.A
+
+        # init step:
+        alpha_temp = self.q * pX[:,0]
+        c[0] = alpha_temp.sum()
+        alpha_hat[:,0] = alpha_temp / c[0]
+        
+        # forward step:
+        for t in range(1, T):
+            alpha_temp = np.dot(alpha_hat[:,t-1], A) * pX[:,t]
+            c[t] = alpha_temp.sum()
+            alpha_hat[:,t] = alpha_temp / c[t]
+
+        # termination
+        if self.A.shape[0] != self.A.shape[1]:
+            # finite duration
+            alpha_temp = alpha_hat[:,T - 1] * self.A[:, -1]  # Last column of A for termination
+            c[T] = alpha_temp.sum()
+        
+        return alpha_hat, c
+
 
     def finiteDuration(self):
         pass
