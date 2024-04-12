@@ -174,8 +174,64 @@ class MarkovChain:
     def finiteDuration(self):
         pass
     
-    def backward(self):
-        pass
+    def backward(self, c, pX):
+        '''
+        Input:
+        matrix pX of size: N (nr of states) x T filled with values proportional to the state-conditional probability mass
+        or density values for each state and each frame in the observed feature sequence
+        vector c of size: 1 x T as corresponding sequence of scale factors
+        
+        Output:
+        beta_hat is matrix of N (nr of states) x T: scaled backward variable
+        
+        def backward(self, scaledProbOfObservations, observations, c):
+        T = scaledProbOfObservations.shape[1]
+        J = self.A.shape[0]
+        beta = np.zeros((J, T))
+        one = np.ones(J)
+        
+        #Initialization Step
+        if self.is_finite:
+            beta[:, T - 1] = self.A[:, J] / (c[T - 1] * c[T])
+        else:
+            beta[:, T - 1] = one / c[T - 1]
+
+
+        #Backward Step
+        for t in range(T - 2, -1, -1): #Starting with T-1 at index T - 2 
+            for i in range(J):
+                probThatiCameBeforej = 0
+                for j in range(J):
+                    probThatiCameBeforej += self.A[i, j] * beta[j, t + 1] * scaledProbOfObservations[j, t + 1]
+                beta[i, t] += probThatiCameBeforej
+            beta[:, t] = beta[:, t] / c[t]
+
+            
+        return beta
+        
+        
+        '''
+        N, T = pX.shape
+        beta_hat = np.zeros((N, T))
+        
+        # init step:
+        if self.A.shape[0] != self.A.shape[1]:
+            # finite duration
+            beta_hat[:, T-1] = self.A[:,N]/(c[T-1]*c[T])
+        else:
+            # infinite duration
+            beta_hat[:,T-1] = 1/c[T-1]
+        
+        # backward step:
+        for t in range(T-2, -1, -1): # backwards
+            for i in range(N):
+                sum = 0
+                for j in range(N):
+                    sum += self.A[i, j]*beta_hat[j, t+1] * pX[j, t+1]
+                beta_hat[i, t] += sum
+            beta_hat[:, t] = beta_hat[:, t]/c[t]
+        
+        return beta_hat
 
     def adaptStart(self):
         pass
