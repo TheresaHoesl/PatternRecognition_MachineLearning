@@ -140,6 +140,7 @@ class MarkovChain:
         alpha_hat is matrix of N (nr of states) x T: scaled forward variable
         c is vector of length T and contains the forward scaled factors
         '''
+        
         N, T = pX.shape
         alpha_hat = np.zeros((N, T))
         if self.A.shape[0] != self.A.shape[1]:
@@ -168,7 +169,6 @@ class MarkovChain:
             c[T] = alpha_temp.sum()
         
         return alpha_hat, c
-
 
     def finiteDuration(self):
         pass

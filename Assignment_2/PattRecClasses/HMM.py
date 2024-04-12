@@ -100,3 +100,22 @@ class HMM:
 
     def adaptAccum(self):
         pass
+    
+    def prob(self, values, scaling):
+        nr_values = len(values)
+        nr_sources = len(self.outputDistr)
+        pX = np.zeros((nr_sources, nr_values))
+        scaled_pX = np.zeros((nr_sources, nr_values))
+        
+        for source in range(nr_sources):
+            for t in range(nr_values):
+                pX[source, t] = self.outputDistr[source].prob(values[t])
+                
+        if scaling:        
+            for source in range(nr_sources):
+                for observation in range(nr_values):
+                    scaled_pX[source, observation] = pX[source,observation]/np.amax(pX[:,observation])
+        else:
+            scaled_pX = pX
+                
+        return scaled_pX
