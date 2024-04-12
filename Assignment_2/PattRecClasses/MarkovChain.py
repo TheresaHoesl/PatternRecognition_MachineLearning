@@ -148,6 +148,7 @@ class MarkovChain:
             c = np.zeros(T+1)
             A = self.A[:, :-1] # cut exit state
         else:
+            # infinite duration
             c = np.zeros(T)
             A = self.A
 

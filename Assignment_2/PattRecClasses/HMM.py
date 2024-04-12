@@ -89,8 +89,10 @@ class HMM:
     def setStationary(self):
         pass
 
-    def logprob(self):
-        pass
+    def logprob(self, values):
+        scaled_pX = self.prob(values, False)
+        alpha_hat, c = self.stateGen.forward(scaled_pX)
+        return np.sum(np.log(c))
 
     def adaptStart(self):
         pass
