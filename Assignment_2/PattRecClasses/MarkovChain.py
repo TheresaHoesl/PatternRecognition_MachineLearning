@@ -183,33 +183,6 @@ class MarkovChain:
         
         Output:
         beta_hat is matrix of N (nr of states) x T: scaled backward variable
-        
-        def backward(self, scaledProbOfObservations, observations, c):
-        T = scaledProbOfObservations.shape[1]
-        J = self.A.shape[0]
-        beta = np.zeros((J, T))
-        one = np.ones(J)
-        
-        #Initialization Step
-        if self.is_finite:
-            beta[:, T - 1] = self.A[:, J] / (c[T - 1] * c[T])
-        else:
-            beta[:, T - 1] = one / c[T - 1]
-
-
-        #Backward Step
-        for t in range(T - 2, -1, -1): #Starting with T-1 at index T - 2 
-            for i in range(J):
-                probThatiCameBeforej = 0
-                for j in range(J):
-                    probThatiCameBeforej += self.A[i, j] * beta[j, t + 1] * scaledProbOfObservations[j, t + 1]
-                beta[i, t] += probThatiCameBeforej
-            beta[:, t] = beta[:, t] / c[t]
-
-            
-        return beta
-        
-        
         '''
         N, T = pX.shape
         beta_hat = np.zeros((N, T))
