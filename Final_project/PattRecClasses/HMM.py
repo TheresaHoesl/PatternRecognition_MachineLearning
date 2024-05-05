@@ -52,23 +52,6 @@ class HMM:
         self.dataSize = distributions[0].dataSize
     
     def rand(self, nSamples, length=1):
-        """
-        [X,S]=rand(self,nSamples); generates a random sequence of data
-        from a given Hidden Markov Model.
-        
-        Input:
-        nSamples=  maximum no of output samples (scalars or column vectors)
-        
-        Result:
-        X= matrix or row vector with output data samples
-        S= row vector with corresponding integer state values
-          obtained from the self.StateGen component.
-          nS= length(S) == size(X,2)= number of output samples.
-          If the StateGen can generate infinite-duration sequences,
-              nS == nSamples
-          If the StateGen is a finite-duration MarkovChain,
-              nS <= nSamples
-        """
         S = self.stateGen.rand(nSamples)
         X = []
         for i in range(len(S)):
@@ -77,8 +60,35 @@ class HMM:
         return X, S
         
         
-    def viterbi(self):
-        pass
+    def viterbi(self, seq):
+        len_seq = seq.shape[0]
+        nr_states = self.nStates
+        xi = np.zeros((nr_states, len_seq))
+        zeta = np.zeros((nr_states, len_seq))
+        
+        scaled_pX = self.prob(seq, True)
+        
+        # t = 1
+        xi[:,0] = self.stateGen.q * scaled_pX[:,1]
+        
+        # t = 2, 3, ... T
+        for t in range(len_seq):
+            for j in range(nr_states):
+                zeta[j, t] = np.argmax(xi[:, t-1]*self.stateGen.A[:, j]) #correct?
+                xi[j, t] = zeta[j, t] * scaled_pX[j,t]
+                
+        # find state sequence
+        states = np.zeros((len_seq))
+        
+        # for time t = T
+        states[-1] = int(np.argmax(xi[:, -1]))
+        
+        # for time t = T-1, T-2, ... 0
+        for t in range(len_seq-2, -1, -1):
+            states[t] = int(zeta[int(states[t+1]), t+1])
+        
+        return states
+        
     
     def get_q(self, alpha_hat, beta_hat, c):
         gamma = alpha_hat[:,0]*beta_hat[:,0]*c[0]
@@ -87,12 +97,12 @@ class HMM:
     
     def get_A(self, alpha_hat, beta_hat, scaled_pX):
         len_seq = alpha_hat.shape[1]
-        nr_states = alpha_hat.shape[0]
+        nr_states = self.nStates
         xi = np.zeros((nr_states, nr_states, len_seq)) # snd [1]
         for t in range(len_seq-1):
             for currentState in range(nr_states):
                 for nextState in range(nr_states):
-                    value = alpha_hat[currentState][t] * self.stateGen.A[currentState, nextState] * scaled_pX[nextState][t + 1] * beta_hat[nextState][t + 1]
+                    value = alpha_hat[currentState, t] * self.stateGen.A[currentState, nextState] * scaled_pX[nextState, t + 1] * beta_hat[nextState, t + 1]
                     xi[currentState, nextState, t] = value
                         
         xi_bar = np.sum(xi, axis=2)
@@ -100,74 +110,42 @@ class HMM:
         A = np.zeros((nr_states, nr_states))
         for i in range(nr_states):
             for j in range(nr_states):
-                A[i, j] = xi_bar[i][j]/xi_sum[i]
+                A[i, j] = xi_bar[i, j]/xi_sum[i]
                 
         return A
     
     def get_B(self, alpha_hat, beta_hat, c, seq):
-        
+        nr_states = self.nStates
         len_seq = alpha_hat.shape[1]
-        nr_states = alpha_hat.shape[0]
         gamma = np.zeros((nr_states, len_seq))
-        mu = np.zeros((nr_states, nr_states))
+        m = np.zeros((nr_states, nr_states))
         co = np.zeros((nr_states, nr_states, nr_states))
         g = np.zeros((nr_states))
+
+        for t in range(len_seq):
+            for i in range(nr_states):
+                gamma[i, t] = alpha_hat[i, t] * beta_hat[i, t] * c[t]
+
+        for i in range(nr_states):
+            for t in range(len_seq):
+                m[i] += seq[t,:] * gamma[i, t]
+                g[i] += gamma[i, t]
+                temp = seq[t,:] - np.atleast_2d(self.outputDistr[i].means)
+                co[i] += gamma[i, t] * (temp.T.dot(temp))
+
         mean = np.zeros((nr_states, nr_states))
         cov = np.zeros((nr_states, nr_states, nr_states))
 
-        for t in range(len_seq):
-            for i in range(nr_states):
-                gamma[i,t] = alpha_hat[i][t]*beta_hat[i,t]*c[t]
-                mu[i] += seq[t,i] * gamma[i,t] 
-        
-        # normalization
-        g = np.sum(gamma, axis = 1)
-        mean = mu/g
-         
-        for t in range(len_seq):     
-            for i in range(nr_states):
-                co += (seq[t, i] - np.atleast_2d(mean[i]))*(seq[t, i] - np.atleast_2d(mean[i])).T
-        
-        # normalization
-        cov = co/g
-                
+        for i in range(nr_states):
+            if g[i] > 0:
+                mean[i] = m[i] / g[i]
+                cov[i] = co[i] / g[i]
+
         return mean, cov
-        '''
-        
-        gamma = np.zeros((nr_states, nr_states, len_seq))
-        mu = np.zeros((nr_states, nr_states))
-        co = np.zeros((nr_states, nr_states, nr_states))
-        for t in range(len_seq):
-            for i in range(nr_states):
-                gamma[i,t] = alpha_hat[i,t]*beta_hat[i,t]*c[t]
-                mu[i] += gamma[i,t]*seq[t]
-        
-        # normalization
-        g = np.sum(gamma, axis = 1)
-        mean = mu/g
-           
-        for t in range(len_seq):     
-            for i in range(nr_states):
-                co += (seq[t, i] - np.atleast_2d(mean[i]))*(seq[t, i] - np.atleast_2d(mean[i])).T
-        
-        # normalization
-         
-        for i in nr_states:
-            cov = co/g       
-        
-        return mean, cov
-        '''
-            
+
         
     def train(self, seq):
-        '''
-        [q, A, B]=train(self, seq) trains the HMM using the Baum-Welch algorithm
-        Input:
-        training sequence
-
-        '''
-        
-        nr_states = self.stateGen.A.shape[0]
+        nr_states = self.nStates
         
         # init
         self.stateGen.q = np.repeat(1/nr_states, nr_states)
@@ -179,6 +157,7 @@ class HMM:
         
         self.outputDistr = [GaussD(np.repeat([0], nr_states), stdevs=1) for i in range(nr_states)] 
         
+        # updating q, A, output distributions
         for i in range(5):
             # get alpha_hats, beta_hats, cs
             scaled_pX = self.prob(seq, True)
