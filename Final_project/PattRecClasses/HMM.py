@@ -79,9 +79,123 @@ class HMM:
         
     def viterbi(self):
         pass
+    
+    def get_q(self, alpha_hat, beta_hat, c):
+        gamma = alpha_hat[:,0]*beta_hat[:,0]*c[0]
+        q = gamma/sum(gamma)
+        return q
+    
+    def get_A(self, alpha_hat, beta_hat, scaled_pX):
+        len_seq = alpha_hat.shape[1]
+        nr_states = alpha_hat.shape[0]
+        xi = np.zeros((nr_states, nr_states, len_seq)) # snd [1]
+        for t in range(len_seq-1):
+            for currentState in range(nr_states):
+                for nextState in range(nr_states):
+                    value = alpha_hat[currentState][t] * self.stateGen.A[currentState, nextState] * scaled_pX[nextState][t + 1] * beta_hat[nextState][t + 1]
+                    xi[currentState, nextState, t] = value
+                        
+        xi_bar = np.sum(xi, axis=2)
+        xi_sum = np.sum(xi_bar, axis=1)
+        A = np.zeros((nr_states, nr_states))
+        for i in range(nr_states):
+            for j in range(nr_states):
+                A[i, j] = xi_bar[i][j]/xi_sum[i]
+                
+        return A
+    
+    def get_B(self, alpha_hat, beta_hat, c, seq):
+        
+        len_seq = alpha_hat.shape[1]
+        nr_states = alpha_hat.shape[0]
+        gamma = np.zeros((nr_states, len_seq))
+        mu = np.zeros((nr_states, nr_states))
+        co = np.zeros((nr_states, nr_states, nr_states))
+        g = np.zeros((nr_states))
+        mean = np.zeros((nr_states, nr_states))
+        cov = np.zeros((nr_states, nr_states, nr_states))
 
-    def train(self):
-        pass
+        for t in range(len_seq):
+            for i in range(nr_states):
+                gamma[i,t] = alpha_hat[i][t]*beta_hat[i,t]*c[t]
+                mu[i] += seq[t,i] * gamma[i,t] 
+        
+        # normalization
+        g = np.sum(gamma, axis = 1)
+        mean = mu/g
+         
+        for t in range(len_seq):     
+            for i in range(nr_states):
+                co += (seq[t, i] - np.atleast_2d(mean[i]))*(seq[t, i] - np.atleast_2d(mean[i])).T
+        
+        # normalization
+        cov = co/g
+                
+        return mean, cov
+        '''
+        
+        gamma = np.zeros((nr_states, nr_states, len_seq))
+        mu = np.zeros((nr_states, nr_states))
+        co = np.zeros((nr_states, nr_states, nr_states))
+        for t in range(len_seq):
+            for i in range(nr_states):
+                gamma[i,t] = alpha_hat[i,t]*beta_hat[i,t]*c[t]
+                mu[i] += gamma[i,t]*seq[t]
+        
+        # normalization
+        g = np.sum(gamma, axis = 1)
+        mean = mu/g
+           
+        for t in range(len_seq):     
+            for i in range(nr_states):
+                co += (seq[t, i] - np.atleast_2d(mean[i]))*(seq[t, i] - np.atleast_2d(mean[i])).T
+        
+        # normalization
+         
+        for i in nr_states:
+            cov = co/g       
+        
+        return mean, cov
+        '''
+            
+        
+    def train(self, seq):
+        '''
+        [q, A, B]=train(self, seq) trains the HMM using the Baum-Welch algorithm
+        Input:
+        training sequence
+
+        '''
+        
+        nr_states = self.stateGen.A.shape[0]
+        
+        # init
+        self.stateGen.q = np.repeat(1/nr_states, nr_states)
+        
+        self.stateGen.A = np.zeros((nr_states, nr_states))
+        for i in range(nr_states):
+            for j in range(nr_states):
+                self.stateGen.A[i, j] = 1 /nr_states
+        
+        self.outputDistr = [GaussD(np.repeat([0], nr_states), stdevs=1) for i in range(nr_states)] 
+        
+        for i in range(5):
+            # get alpha_hats, beta_hats, cs
+            scaled_pX = self.prob(seq, True)
+            alpha_hat, c = self.stateGen.forward(scaled_pX) # dim: nr_states x T
+            beta_hat = self.stateGen.backward(c, scaled_pX) # dim: nr_states x T
+            
+            # update initial probability vector
+            q = self.get_q(alpha_hat, beta_hat, c)
+            self.stateGen.q = q
+            
+            # update transition probability matrix
+            A = self.get_A(alpha_hat, beta_hat, scaled_pX)
+            self.stateGen.A = A
+            
+            # update output distributions
+            mean, cov = self.get_B(alpha_hat, beta_hat, c, seq)
+            self.outputDistr = [GaussD(mean[i], cov=cov[i]) for i in range(len(self.outputDistr))]
 
     def stateEntropyRate(self):
         pass
