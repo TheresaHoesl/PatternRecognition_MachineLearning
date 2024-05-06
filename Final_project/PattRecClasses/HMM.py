@@ -61,6 +61,7 @@ class HMM:
         
         
     def viterbi(self, seq):
+        '''
         len_seq = seq.shape[0]
         nr_states = self.nStates
         xi = np.zeros((nr_states, len_seq))
@@ -72,7 +73,7 @@ class HMM:
         xi[:,0] = self.stateGen.q * scaled_pX[:,1]
         
         # t = 2, 3, ... T
-        for t in range(len_seq):
+        for t in range(1, len_seq):
             for j in range(nr_states):
                 zeta[j, t] = np.argmax(xi[:, t-1]*self.stateGen.A[:, j]) #correct?
                 xi[j, t] = zeta[j, t] * scaled_pX[j,t]
@@ -88,6 +89,39 @@ class HMM:
             states[t] = int(zeta[int(states[t+1]), t+1])
         
         return states
+        '''
+
+        len_seq = seq.shape[0]
+        nr_states = self.nStates
+        xi = np.zeros((nr_states, len_seq))
+        zeta = np.zeros((nr_states, len_seq))
+        
+        scaled_pX = self.prob(seq, True)
+        
+        # t = 0
+        xi[:,0] = self.stateGen.q * scaled_pX[:,0]
+        
+        # t = 1, 2, ... T
+        for t in range(1, len_seq):
+            for j in range(nr_states):
+                # Calculate the maximum probability of reaching state j at time t
+                max_prob = np.max(xi[:, t-1] * self.stateGen.A[:, j] * scaled_pX[:, t])
+                xi[j, t] = max_prob
+                # Store the index of the state that achieves that maximum probability
+                zeta[j, t] = np.argmax(xi[:, t-1] * self.stateGen.A[:, j] * scaled_pX[:, t])
+                    
+        # Find state sequence
+        states = np.zeros((len_seq))
+        
+        # Find the state with the maximum probability at time T
+        states[-1] = int(np.argmax(xi[:, -1]))
+        
+        # Backtrack to find the optimal state sequence
+        for t in range(len_seq-2, -1, -1):
+            states[t] = int(zeta[int(states[t+1]), t+1])
+        
+        return states
+
         
     
     def get_q(self, alpha_hat, beta_hat, c):
@@ -147,6 +181,7 @@ class HMM:
     def train(self, seq):
         nr_states = self.nStates
         
+        '''
         # init
         self.stateGen.q = np.repeat(1/nr_states, nr_states)
         
@@ -157,6 +192,7 @@ class HMM:
         
         self.outputDistr = [GaussD(np.repeat([0], nr_states), stdevs=1) for i in range(nr_states)] 
         
+        '''
         # updating q, A, output distributions
         for i in range(5):
             # get alpha_hats, beta_hats, cs
@@ -197,14 +233,16 @@ class HMM:
         pass
     
     def prob(self, values, scaling):
-        nr_values = len(values)
+        nr_dim = values.shape[0]
+        nr_values = values.shape[0]
         nr_sources = len(self.outputDistr)
         pX = np.zeros((nr_sources, nr_values))
         scaled_pX = np.zeros((nr_sources, nr_values))
         
         for source in range(nr_sources):
             for t in range(nr_values):
-                pX[source, t] = self.outputDistr[source].prob(values[t])
+                #for i in range(nr_dim):
+                    pX[source, t] = self.outputDistr[source].prob(values[t])
                 
         if scaling:        
             for source in range(nr_sources):
