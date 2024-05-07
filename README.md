@@ -1,1 +1,2 @@
-Projects of the course EQ2341 "Pattern Recognition and Machine Learning"
+Projects of the course EQ2341 "Pattern Recognition and Machine Learning": the first two assignments implement the code for HMMs including initialization, the forward and backwarI developed an HMM capable of discriminating among these three states and accurately classifying new data points. I developed an HMM capable of discriminating among these three states and accurately classifying new data points.
+
