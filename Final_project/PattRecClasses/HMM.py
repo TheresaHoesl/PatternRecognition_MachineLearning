@@ -61,36 +61,6 @@ class HMM:
         
         
     def viterbi(self, seq):
-        '''
-        len_seq = seq.shape[0]
-        nr_states = self.nStates
-        xi = np.zeros((nr_states, len_seq))
-        zeta = np.zeros((nr_states, len_seq))
-        
-        scaled_pX = self.prob(seq, True)
-        
-        # t = 1
-        xi[:,0] = self.stateGen.q * scaled_pX[:,1]
-        
-        # t = 2, 3, ... T
-        for t in range(1, len_seq):
-            for j in range(nr_states):
-                zeta[j, t] = np.argmax(xi[:, t-1]*self.stateGen.A[:, j]) #correct?
-                xi[j, t] = zeta[j, t] * scaled_pX[j,t]
-                
-        # find state sequence
-        states = np.zeros((len_seq))
-        
-        # for time t = T
-        states[-1] = int(np.argmax(xi[:, -1]))
-        
-        # for time t = T-1, T-2, ... 0
-        for t in range(len_seq-2, -1, -1):
-            states[t] = int(zeta[int(states[t+1]), t+1])
-        
-        return states
-        '''
-
         len_seq = seq.shape[0]
         nr_states = self.nStates
         xi = np.zeros((nr_states, len_seq))
@@ -181,18 +151,6 @@ class HMM:
     def train(self, seq):
         nr_states = self.nStates
         
-        '''
-        # init
-        self.stateGen.q = np.repeat(1/nr_states, nr_states)
-        
-        self.stateGen.A = np.zeros((nr_states, nr_states))
-        for i in range(nr_states):
-            for j in range(nr_states):
-                self.stateGen.A[i, j] = 1 /nr_states
-        
-        self.outputDistr = [GaussD(np.repeat([0], nr_states), stdevs=1) for i in range(nr_states)] 
-        
-        '''
         # updating q, A, output distributions
         for i in range(5):
             # get alpha_hats, beta_hats, cs
