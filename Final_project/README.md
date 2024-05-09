@@ -4,4 +4,4 @@ The training data contains a sequence during which the three activities were per
 Furthermore, three files which capture one state each. They are used to estimate mean and covariance of the output distributions (B) of the HMM for the initalization.
 After that, the HMM was created and its parameters {{q, A}, B} trained with the mentioned sequence using the Baum-Welch algorithm. This is handled by the function train() of class HMM.
 Since testing sequences can begin with any state, the q vector is set back to equal probabilities.
-Finally, the HMM was tested with three sequences of each activity and one sequence alternating between the three. The underlying states of a sequence were found by the viterbi() function of class HMM.
+Finally, the HMM was tested with three sequences of each activity and one sequence alternating between the three every 5 sec. The underlying states of a sequence were found by the viterbi() function of class HMM.
